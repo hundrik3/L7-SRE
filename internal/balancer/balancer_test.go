@@ -103,3 +103,61 @@ func TestLeastConnectionsConcurrentReservations(t *testing.T) {
 		}
 	}
 }
+
+func TestLeastConnectionsSelectsLowerLoad(t *testing.T) {
+	backends := testBackends(t)
+	lb, err := NewLeastConnections(backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leases := make([]*Lease, 3)
+	for i := range leases {
+		leases[i], err = lb.Acquire(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer leases[i].Release()
+	}
+	leases[1].Release()
+	lease, err := lb.Acquire(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Release()
+	if lease.Backend() != backends[1] {
+		t.Fatal("did not select the uniquely least-loaded peer")
+	}
+}
+
+func TestConcurrentHealthAndAcquire(t *testing.T) {
+	backends := testBackends(t)
+	lb, err := NewRoundRobin(backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 1000; i++ {
+			backends[0].SetAlive(i%2 == 0)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 1000; i++ {
+			lease, err := lb.Acquire(nil)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			lease.Release()
+		}
+	}()
+	wg.Wait()
+	for _, b := range backends {
+		if b.ActiveRequests() != 0 {
+			t.Fatal("reservation leaked")
+		}
+	}
+}

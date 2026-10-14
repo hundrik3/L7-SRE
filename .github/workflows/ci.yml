@@ -1,0 +1,22 @@
+name: Go
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: true
+      - run: go mod verify
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+      - run: go build -o bin/l7lb ./cmd/l7lb
+      - run: python3 scripts/smoke.py bin/l7lb

@@ -81,8 +81,7 @@ Path агрегирован как proxy; methods нормализованы. Ba
 ```sh
 docker compose stop lb
 docker compose logs --tail=20 lb
-make build
-python3 scripts/smoke.py bin/l7lb
+make smoke
 ```
 
 Compose даёт 30s на SIGTERM; внутренний default drain — 25s. Оркестратор должен

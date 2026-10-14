@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: build run test vet bench fmt demo demo-down
+.PHONY: build run test smoke vet bench fmt demo demo-down
 
 build:
 	$(GO) build -trimpath -o bin/l7lb ./cmd/l7lb
@@ -10,6 +10,9 @@ run:
 
 test:
 	$(GO) test -race -count=1 ./...
+
+smoke:
+	$(GO) test -race -count=1 -v ./cmd/l7lb -run '^TestSmoke'
 
 vet:
 	$(GO) vet ./...

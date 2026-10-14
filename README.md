@@ -39,6 +39,7 @@ Dockerfile собирает статический бинарник отдель
 
 ```text
 cmd/l7lb/main.go          # Configuration, HTTP servers, workers, shutdown
+cmd/l7lb/smoke_test.go    # Process-level integration and SIGTERM tests
 internal/balancer/       # Backend state, reservations, two strategies
 internal/limiter/        # Token buckets, cleanup, trusted client IP resolution
 internal/health/         # Concurrent active probes
@@ -49,7 +50,6 @@ config/example.env       # Complete local configuration example
 deploy/nginx/            # Demo backend configuration
 deploy/prometheus/       # Optional scrape configuration
 docs/                    # Design, configuration, operations, performance
-scripts/smoke.py          # End-to-end checks with local HTTP backends
 .github/workflows/ci.yml  # Go 1.22, race tests, vet, build
 Dockerfile
 docker-compose.yml
@@ -64,12 +64,14 @@ make build
 make test
 make vet
 make bench
-python3 scripts/smoke.py bin/l7lb
+make smoke
 ```
 
 Smoke-тест самостоятельно запускает три HTTP-бэкенда, проверяет failover,
 восстановление, rate limiting, Prometheus и SIGTERM с активным запросом.
-Python 3 нужен только для этого теста, не для приложения.
+Он написан на Go и входит в `go test -race ./...`; дополнительный runtime не нужен.
+Тесты запускают приложение отдельным процессом из test executable, включая
+race instrumentation. На Windows signal-based smoke-тесты пропускаются.
 
 Для собственного окружения запустите бэкенды и загрузите настройки:
 
